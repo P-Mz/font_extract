@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>字体文件转提取转base64</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        input[type='text'],
+        input[type='file'] {
+            outline: none;
+        }
+
+        .container {
+            max-width: 960px;
+            width: 90%;
+            margin: 20px auto;
+        }
+
+
+        .block {
+            border: 1px solid #282828;
+            margin-top: 20px;
+        }
+
+        .block>h3 {
+            background-color: #282828;
+            padding: 10px 20px;
+            color: #fff;
+        }
+
+        .input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .input-wrap>p {
+            width: 50%;
+        }
+
+        .input-wrap input[type='text'] {
+            width: 60%;
+            padding: 5px;
+        }
+
+
+        .download-file {
+            display: flex;
+            min-height: 60px;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .download-file a {
+            text-decoration: none;
+            color: #272ce6;
+            padding: 5px 20px;
+        }
+
+
+        .show-base64 {
+            min-height: 200px;
+            font-size: 14px;
+            word-wrap: break-word;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+
+        .effect-wrap .p {
+            font-size: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .effect-wrap .p>p {
+            width: 50%;
+            min-height: 50px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="container">
+
+        <div class="input-wrap" id="input-wrap">
+            <p>
+                目标字符: 
+                <input type="text" name="target_text" id="target_text" autofocus placeholder="请先输入目标字符" />
+            </p>
+            <input type="file" name="uploadfile" id="uploadfile" placeholder="选择字体文件" />
+        </div>
+
+        <div class="effect-wrap block">
+            <h3>字体效果:</h3>
+            <div class="p">
+                <p id="no-effect"></p>
+                <p id="effect"></p>
+            </div>
+        </div>
+
+        <div class="block">
+            <h3>下载字体:</h3>
+            <div class="download-file" id="download-file"></div>
+        </div>
+
+        <div class="base64-wrap block">
+            <h3>base64:</h3>
+            <div class="show-base64" id="show-base64">
+                <code></code>
+            </div>
+        </div>
+    </div>
+
+    <script src="/public/jquery.min.js"></script>
+    <script>
+
+        const inputFont = $('#target_text');
+        let file = null;
+        let target_text = null;
+
+        // 输入框回车
+        inputFont.keydown(function(e) {
+            e.keyCode === 13 
+            && file != null 
+            && this.value != '' 
+            && upload(file, this.value)
+        });
+
+
+        // 选择文件
+        $('#input-wrap').on('change', '#uploadfile', function () {
+
+            target_text = $(inputFont).val();
+            file = this.files[0];
+
+            target_text != ''
+            ? upload(file, target_text)
+            : $(inputFont).focus();
+        });
+
+        // $('#download-file').on('click', 'a', function (){
+        //     let ext = this.innerHTML.slice(this.innerHTML.lastIndexOf('.'));
+        //     let dirname = $(this).attr('dirname');
+        //     window.open(`/download/${dirname}/font${ext}`);
+        // })
+
+
+        // 上传文件
+        function upload(files, target_text) {
+            let formdata = new FormData();
+            formdata.append("file", files);
+            formdata.append("target_text", target_text);
+
+            $.ajax({
+                type: "POST",
+                url: "http://localhost:8080/upload_file",
+                data: formdata,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+
+                    if (res.data === ''){
+                        alert(res.msg);
+                        return false;
+                    }
+
+                    const { base64, files, dirname } = res.data;
+
+                    // 提供可下载的文件
+                    $('#download-file').html(files.map(filename => `<a href="/download/${dirname}/${filename}">${filename}</a>`));
+
+                    // 显示 base64 方便复制
+                    $('#show-base64 > code').html(`
+                        @font-face {
+                            font-family: "testfont";
+                            src: url("${base64}");
+                        }
+                    `);
+
+                    // 在 head 追加字体
+                    $(window.document.head).append(`<style>
+                        @font-face {
+                            font-family: "testfont";
+                            src: url("${base64}");
+                        }
+                    </style>`);
+                    $('#effect').css('font-family', 'testfont').html(target_text);
+                    $('#no-effect').html(target_text);
+                }
+            });
+        }
+
+
+        // for (var i=0; i<5; i++){
+        //     (function (i){
+        //         dom.onclic = function (){
+        //             console.log(i);
+        //         }
+        //     })(i);
+        // }
+
+
+        // function fn1(){
+        //     var a = 1;
+        //     return function (){
+        //         console.log(a);
+        //     }
+        // }
+
+
+        // function click (){}
+        // dom.click = click
+        // obj.fn = click
+        // parent.removeChild(dom);
+
+
+    </script>
+
+
+</body>
+
+</html>
